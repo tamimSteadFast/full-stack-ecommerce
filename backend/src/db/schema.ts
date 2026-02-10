@@ -49,6 +49,14 @@ export const productVariants = mysqlTable("product_variants", {
   skuIdx: uniqueIndex("sku_idx").on(table.sku),
 }));
 
+/** ================= Variant Attributes ================= */
+export const variantAttributes = mysqlTable("variant_attributes", {
+  id: int("id").primaryKey().autoincrement(),
+  variantId: int("variant_id").notNull().references(() => productVariants.id, { onDelete: 'cascade' }),
+  name: varchar("name", { length: 50 }).notNull(),
+  value: varchar("value", { length: 50 }).notNull(),
+});
+
 /** ================= Prices ================= */
 export const prices = mysqlTable("prices", {
   id: int("id").primaryKey().autoincrement(),
@@ -92,7 +100,7 @@ export const cartItems = mysqlTable("cart_items", {
 /** ================= Orders ================= */
 export const orders = mysqlTable("orders", {
   id: int("id").primaryKey().autoincrement(),
-  userId: int("user_id").notNull().references(() => users.id, { onDelete: 'set null' }),
+  userId: int("user_id").references(() => users.id, { onDelete: 'set null' }),
   status: mysqlEnum("status", ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"]).default("PENDING"),
   totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
   currency: varchar("currency", { length: 10 }).default("BDT"),
@@ -157,6 +165,14 @@ export const productVariantsRelations = relations(productVariants, ({ one, many 
   inventory: one(inventory, {
     fields: [productVariants.id],
     references: [inventory.variantId]
+  }),
+  attributes: many(variantAttributes),
+}));
+
+export const variantAttributesRelations = relations(variantAttributes, ({ one }) => ({
+  variant: one(productVariants, {
+    fields: [variantAttributes.variantId],
+    references: [productVariants.id],
   }),
 }));
 

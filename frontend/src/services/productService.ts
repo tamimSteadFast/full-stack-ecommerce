@@ -11,11 +11,18 @@ export interface Inventory {
   quantity: number;
 }
 
+export interface ProductAttribute {
+  id?: number;
+  name: string;
+  value: string;
+}
+
 export interface ProductVariant {
   id: number;
   sku: string;
   prices: Price[];
   inventory: Inventory[];
+  attributes?: ProductAttribute[];
 }
 
 export interface Product {
@@ -40,6 +47,21 @@ export interface ProductsResponse {
   };
 }
 
+export interface CreateProductVariant {
+  sku: string;
+  price: number;
+  stock: number;
+  attributes?: { name: string; value: string }[];
+}
+
+export interface CreateProductPayload {
+  name: string;
+  description?: string;
+  brand?: string;
+  status?: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+  variants?: CreateProductVariant[];
+}
+
 export const productService = {
   getAll: async (params?: { page?: number; limit?: number; search?: string; brand?: string }) => {
     const response = await apiClient.get<ProductsResponse>('/products', { params });
@@ -51,8 +73,8 @@ export const productService = {
     return response.data;
   },
 
-  create: async (data: Partial<Product>) => {
-    const response = await apiClient.post<Product>('/products', data);
+  create: async (data: CreateProductPayload) => {
+    const response = await apiClient.post<{ message: string }>('/products', data);
     return response.data;
   },
 

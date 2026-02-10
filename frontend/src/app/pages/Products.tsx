@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Filter } from 'lucide-react';
 import { StatusBadge } from '../components/StatusBadge';
-import { productService, Product, ProductVariant } from '../../services/productService';
+import { productService, Product, ProductVariant, CreateProductPayload } from '../../services/productService';
+import { Modal } from '../components/ui/Modal';
+import { ProductForm } from '../components/ProductForm';
 
 export function Products() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -38,6 +40,17 @@ export function Products() {
       console.error('Failed to load products:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddProduct = async (data: CreateProductPayload) => {
+    try {
+      await productService.create(data);
+      setShowAddModal(false);
+      loadProducts();
+    } catch (error) {
+      console.error('Failed to create product:', error);
+      alert('Failed to create product. Please try again.');
     }
   };
 
@@ -237,85 +250,17 @@ export function Products() {
 
 
       {/* Add Product Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-[#E5E7EB]">
-              <h2 className="text-xl text-[#1F2937]">Add New Product</h2>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm text-[#1F2937] mb-2">Product Name</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-2 border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E40AF]"
-                  placeholder="Enter product name"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-[#1F2937] mb-2">SKU</label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E40AF]"
-                    placeholder="Enter SKU"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-[#1F2937] mb-2">Category</label>
-                  <select className="w-full px-4 py-2 border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E40AF]">
-                    <option>Select category</option>
-                    <option>Electronics</option>
-                    <option>Apparel</option>
-                    <option>Footwear</option>
-                    <option>Accessories</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-[#1F2937] mb-2">Brand</label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E40AF]"
-                    placeholder="Enter brand"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-[#1F2937] mb-2">Price (৳)</label>
-                  <input
-                    type="number"
-                    className="w-full px-4 py-2 border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E40AF]"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm text-[#1F2937] mb-2">Description</label>
-                <textarea
-                  rows={4}
-                  className="w-full px-4 py-2 border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E40AF]"
-                  placeholder="Enter product description"
-                />
-              </div>
-            </div>
-            <div className="p-6 border-t border-[#E5E7EB] flex justify-end gap-3">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 border border-[#E5E7EB] rounded-lg text-[#6B7280] hover:bg-[#F9FAFB]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 bg-[#1E40AF] text-white rounded-lg hover:bg-[#1E40AF]/90"
-              >
-                Add Product
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add New Product"
+        size="2xl"
+      >
+        <ProductForm
+          onSubmit={handleAddProduct}
+          onCancel={() => setShowAddModal(false)}
+        />
+      </Modal>
     </div>
   );
 }

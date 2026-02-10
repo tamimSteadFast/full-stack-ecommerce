@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
-import { products, productVariants, prices, inventory } from '../db/schema';
+import { products, productVariants, prices, inventory, variantAttributes } from '../db/schema';
 import { eq, like, and, sql, desc } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -10,6 +10,15 @@ export const createProductSchema = z.object({
     description: z.string().optional(),
     brand: z.string().optional(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'ARCHIVED']).optional(),
+    variants: z.array(z.object({
+      sku: z.string().min(1),
+      price: z.number().min(0),
+      stock: z.number().min(0),
+      attributes: z.array(z.object({
+        name: z.string().min(1),
+        value: z.string().min(1)
+      })).optional()
+    })).optional()
   }),
 });
 
@@ -108,15 +117,56 @@ export const getProduct = async (req: Request, res: Response, next: NextFunction
 
 export const createProduct = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, description, brand, status } = req.body;
-    const [result] = await db.insert(products).values({
-      name,
-      description,
-      brand,
-      status,
+    const { name, description, brand, status, variants } = req.body;
+
+    // Use transaction to ensure data integrity
+    await db.transaction(async (tx) => {
+      // 1. Create Product
+      const [productResult] = await tx.insert(products).values({
+        name,
+        description,
+        brand,
+        status: status || 'ACTIVE',
+      });
+      const productId = (productResult as any).insertId;
+
+      // 2. Create Variants
+      if (variants && variants.length > 0) {
+        for (const variant of variants) {
+          const [variantResult] = await tx.insert(productVariants).values({
+            productId,
+            sku: variant.sku,
+          });
+          const variantId = (variantResult as any).insertId;
+
+          // 3. Create Price
+          await tx.insert(prices).values({
+            variantId,
+            amount: variant.price.toString(),
+            currency: 'BDT',
+          });
+
+          // 4. Create Inventory
+          await tx.insert(inventory).values({
+            variantId,
+            quantity: variant.stock,
+          });
+
+          // 5. Create Attributes
+          if (variant.attributes && variant.attributes.length > 0) {
+            for (const attr of variant.attributes) {
+              await tx.insert(variantAttributes).values({
+                variantId,
+                name: attr.name,
+                value: attr.value,
+              });
+            }
+          }
+        }
+      }
     });
-    const insertId = (result as any).insertId;
-    res.status(201).json({ id: insertId, message: 'Product created' });
+
+    res.status(201).json({ message: 'Product created successfully' });
   } catch (error) {
     next(error);
   }
